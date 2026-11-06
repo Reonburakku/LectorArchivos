@@ -30,7 +30,20 @@ public partial class MainWindow : Window
     {
         InitializeComponent();
         TreeList.ItemsSource = _rows;
+        ThemeCombo.SelectedItem = ThemeCombo.Items.Cast<ComboBoxItem>()
+            .First(i => (string)i.Tag == _settings.Theme.ToString());
         LoadDrives();
+    }
+
+    // ───────────────────────────── Tema claro/oscuro ─────────────────────────────
+
+    private void ThemeCombo_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (!IsLoaded || ThemeCombo.SelectedItem is not ComboBoxItem { Tag: string tag }) return;
+        var theme = Enum.Parse<AppTheme>(tag);
+        ThemeManager.Apply(theme);
+        _settings.Theme = theme;
+        _settings.Save();
     }
 
     // ───────────────────────────── Unidades y escaneo ─────────────────────────────

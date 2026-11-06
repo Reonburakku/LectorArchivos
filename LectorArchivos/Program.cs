@@ -1,4 +1,4 @@
-using System.Windows;
+using LectorArchivos.Services;
 using Velopack;
 
 namespace LectorArchivos;
@@ -16,6 +16,7 @@ public static class Program
 
         var app = new App();
         app.InitializeComponent();
+        ThemeManager.Apply(AppSettings.Load().Theme);
         app.Run();
     }
 }

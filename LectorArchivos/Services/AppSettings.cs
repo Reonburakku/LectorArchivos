@@ -20,6 +20,9 @@ public sealed class AppSettings
     public string? EncryptedApiKey { get; set; }
     public string Model { get; set; } = DefaultModel;
 
+    /// <summary>Modo claro/oscuro; por defecto sigue la configuración de Windows.</summary>
+    public AppTheme Theme { get; set; } = AppTheme.System;
+
     public string? GetApiKey()
     {
         if (!string.IsNullOrEmpty(EncryptedApiKey))
