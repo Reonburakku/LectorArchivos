@@ -30,6 +30,15 @@
             <Setter Property="Foreground" Value="{DynamicResource SectionTitleBrush}" />
             <Setter Property="Margin" Value="0,14,0,6" />
         </Style>
+
+        <!-- Menú contextual (clic derecho) de cada fila del árbol. Su DataContext es la fila (TreeRow). -->
+        <ContextMenu x:Key="RowContextMenu" x:Shared="False">
+            <MenuItem Header="Abrir en el explorador" Click="OpenInExplorer_Click">
+                <MenuItem.Icon>
+                    <TextBlock Text="&#xE838;" FontFamily="Segoe MDL2 Assets" />
+                </MenuItem.Icon>
+            </MenuItem>
+        </ContextMenu>
     </Window.Resources>
 
     <Grid Margin="12">
@@ -100,6 +109,7 @@
                             <Setter Property="ToolTip" Value="{Binding ToolTip}" />
                             <Setter Property="Padding" Value="0,1" />
                             <Setter Property="Foreground" Value="{DynamicResource PrimaryTextBrush}" />
+                            <Setter Property="ContextMenu" Value="{StaticResource RowContextMenu}" />
                             <Setter Property="Template">
                                 <Setter.Value>
                                     <ControlTemplate TargetType="ListViewItem">

@@ -238,6 +238,35 @@ public partial class MainWindow : Window
         if (TreeList.SelectedItem is TreeRow row) Toggle(row);
     }
 
+    /// <summary>
+    /// Menú contextual «Abrir en el explorador»: una carpeta se abre directamente; para un archivo
+    /// se abre la carpeta que lo contiene con el archivo seleccionado.
+    /// </summary>
+    private void OpenInExplorer_Click(object sender, RoutedEventArgs e)
+    {
+        if ((sender as FrameworkElement)?.DataContext is not TreeRow row) return;
+        var path = row.Node.FullPath;
+
+        if (row.IsDirectory ? !Directory.Exists(path) : !File.Exists(path))
+        {
+            MessageBox.Show(this, $"Ya no existe:\n{path}\n\nPuede que se haya movido o borrado después de explorar la unidad.",
+                "Abrir en el explorador", MessageBoxButton.OK, MessageBoxImage.Warning);
+            return;
+        }
+
+        var explorer = new ProcessStartInfo("explorer.exe");
+        if (row.IsDirectory)
+        {
+            explorer.ArgumentList.Add(path);
+        }
+        else
+        {
+            // /select necesita la ruta en el mismo argumento: /select,"C:\ruta\archivo"
+            explorer.Arguments = $"/select,\"{path}\"";
+        }
+        Process.Start(explorer);
+    }
+
     private void TreeList_PreviewKeyDown(object sender, KeyEventArgs e)
     {
         if (TreeList.SelectedItem is not TreeRow row) return;
