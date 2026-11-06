@@ -3,22 +3,25 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="Configurar IA (Google Gemini)" Width="520" SizeToContent="Height"
         ResizeMode="NoResize" WindowStartupLocation="CenterOwner" ShowInTaskbar="False"
-        FontFamily="Segoe UI" FontSize="13">
+        FontFamily="Segoe UI" FontSize="13"
+        Background="{DynamicResource AppBackgroundBrush}" Foreground="{DynamicResource PrimaryTextBrush}">
     <StackPanel Margin="16">
         <TextBlock TextWrapping="Wrap" Margin="0,0,0,12">
-            El resumen de cada archivo se obtiene con Google Gemini usando búsqueda en Google.
+            El resumen de cada archivo se obtiene con Google Gemini (nivel gratuito, sin búsqueda en Google).
             Crea una API key gratuita en
             <Hyperlink NavigateUri="https://aistudio.google.com/apikey" RequestNavigate="Hyperlink_RequestNavigate">aistudio.google.com/apikey</Hyperlink>.
         </TextBlock>
 
         <TextBlock Text="API key" FontWeight="SemiBold" />
         <PasswordBox x:Name="ApiKeyBox" Height="28" Margin="0,4,0,2" VerticalContentAlignment="Center" />
-        <TextBlock x:Name="ApiKeyHint" Foreground="#666" FontSize="12" TextWrapping="Wrap" />
+        <TextBlock x:Name="ApiKeyHint" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="12" TextWrapping="Wrap" />
 
         <TextBlock Text="Modelo" FontWeight="SemiBold" Margin="0,12,0,0" />
-        <TextBox x:Name="ModelBox" Height="28" Margin="0,4,0,2" VerticalContentAlignment="Center" />
-        <TextBlock Foreground="#666" FontSize="12" TextWrapping="Wrap"
-                   Text="Por defecto «gemini-flash-latest» (rápido y con nivel gratuito). Puedes usar cualquier modelo Gemini que admita la herramienta google_search." />
+        <ComboBox x:Name="ModelCombo" Height="28" Margin="0,4,0,2" VerticalContentAlignment="Center"
+                  DisplayMemberPath="Label" SelectionChanged="ModelCombo_SelectionChanged" />
+        <TextBlock x:Name="ModelNote" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="12" TextWrapping="Wrap" />
+        <TextBlock Foreground="{DynamicResource SecondaryTextBrush}" FontSize="12" TextWrapping="Wrap" Margin="0,2,0,0"
+                   Text="Solo se muestran modelos con nivel gratuito en la API de Gemini. El nivel gratuito tiene límites de consultas por minuto y por día." />
 
         <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,16,0,0">
             <Button Content="Guardar" Width="90" Height="28" IsDefault="True" Click="Save_Click" />

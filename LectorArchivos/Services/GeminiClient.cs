@@ -13,8 +13,9 @@ public sealed record AiSummary(string Text, IReadOnlyList<WebSource> Sources);
 public sealed class GeminiException(string message) : Exception(message);
 
 /// <summary>
-/// Cliente mínimo de la API REST de Google Gemini (generateContent) con
-/// "Grounding with Google Search" activado, para que el modelo busque en internet.
+/// Cliente mínimo de la API REST de Google Gemini (generateContent).
+/// No usa la herramienta google_search ("Grounding with Google Search") porque agota
+/// rápidamente la cuota gratuita: el modelo responde con su propio conocimiento.
 /// </summary>
 public sealed class GeminiClient
 {
@@ -22,7 +23,8 @@ public sealed class GeminiClient
 
     private const string SystemPrompt = """
         Eres un experto en sistemas Windows que ayuda a un usuario a entender qué archivos y carpetas ocupan su disco.
-        Busca en internet información sobre el elemento indicado y responde SIEMPRE en español, en texto plano
+        Explica con tu propio conocimiento qué es el elemento indicado (no tienes acceso a internet, no inventes fuentes)
+        y responde SIEMPRE en español, en texto plano
         (sin Markdown, sin asteriscos ni almohadillas), con exactamente estas secciones, cada una con su título en una línea:
 
         RESUMEN
@@ -69,7 +71,6 @@ public sealed class GeminiClient
                 ["role"] = "user",
                 ["parts"] = new JsonArray(new JsonObject { ["text"] = prompt.ToString() }),
             }),
-            ["tools"] = new JsonArray(new JsonObject { ["google_search"] = new JsonObject() }),
         };
 
         using var request = new HttpRequestMessage(HttpMethod.Post, string.Format(Endpoint, Uri.EscapeDataString(_model)))

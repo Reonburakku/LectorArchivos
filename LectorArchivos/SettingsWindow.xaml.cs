@@ -13,7 +13,10 @@ public partial class SettingsWindow : Window
     {
         InitializeComponent();
         _settings = settings;
-        ModelBox.Text = settings.Model;
+        ModelCombo.ItemsSource = GeminiModels.Free;
+        ModelCombo.SelectedItem =
+            GeminiModels.Free.FirstOrDefault(m => m.Id.Equals(settings.Model, StringComparison.OrdinalIgnoreCase))
+            ?? GeminiModels.Free.First(m => m.Id == AppSettings.DefaultModel);
 
         if (!string.IsNullOrEmpty(settings.EncryptedApiKey))
             ApiKeyHint.Text = "Hay una clave guardada (cifrada para tu usuario de Windows). Déjalo vacío para conservarla.";
@@ -26,10 +29,13 @@ public partial class SettingsWindow : Window
     private void Save_Click(object sender, RoutedEventArgs e)
     {
         if (ApiKeyBox.Password.Length > 0) _settings.SetApiKey(ApiKeyBox.Password);
-        _settings.Model = string.IsNullOrWhiteSpace(ModelBox.Text) ? AppSettings.DefaultModel : ModelBox.Text.Trim();
+        _settings.Model = (ModelCombo.SelectedItem as GeminiModel)?.Id ?? AppSettings.DefaultModel;
         _settings.Save();
         DialogResult = true;
     }
+
+    private void ModelCombo_SelectionChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e) =>
+        ModelNote.Text = (ModelCombo.SelectedItem as GeminiModel)?.Note ?? "";
 
     private void Hyperlink_RequestNavigate(object sender, RequestNavigateEventArgs e)
     {
