@@ -6,6 +6,18 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <UseWPF>true</UseWPF>
+    <!-- Main propio (Program.cs) para que Velopack se ejecute antes que WPF. -->
+    <StartupObject>LectorArchivos.Program</StartupObject>
+
+    <!-- Datos de la aplicación y del instalador. Sube la versión en cada GitHub Release. -->
+    <Version>1.0.0</Version>
+    <Product>Lector de Archivos</Product>
+    <Authors>Reonburakku</Authors>
+    <Description>Explora una unidad, muestra qué ocupa espacio y resume archivos con Google Gemini.</Description>
   </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Velopack" Version="1.2.161" />
+  </ItemGroup>
 
 </Project>
