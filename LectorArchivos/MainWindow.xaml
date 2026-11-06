@@ -1,0 +1,201 @@
+﻿<Window x:Class="LectorArchivos.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Lector de Archivos" Height="760" Width="1280" MinWidth="800" MinHeight="480"
+        WindowStartupLocation="CenterScreen" Background="#F5F6F8"
+        FontFamily="Segoe UI" FontSize="13">
+    <Window.Resources>
+        <BooleanToVisibilityConverter x:Key="BoolToVis" />
+
+        <Style x:Key="ExpanderButton" TargetType="Button">
+            <Setter Property="Width" Value="18" />
+            <Setter Property="Height" Value="18" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="Focusable" Value="False" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border Background="Transparent">
+                            <TextBlock Text="{TemplateBinding Content}" FontSize="14" Foreground="#555"
+                                       HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="SectionTitle" TargetType="TextBlock">
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Foreground" Value="#1F3A5F" />
+            <Setter Property="Margin" Value="0,14,0,6" />
+        </Style>
+    </Window.Resources>
+
+    <Grid Margin="12">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <!-- Controles superiores: unidad + Explorar -->
+        <DockPanel Grid.Row="0" LastChildFill="False">
+            <TextBlock Text="Unidad:" VerticalAlignment="Center" Margin="0,0,8,0" FontWeight="SemiBold" />
+            <ComboBox x:Name="DriveCombo" Width="380" Height="30" VerticalContentAlignment="Center"
+                      DisplayMemberPath="Label" />
+            <Button x:Name="RefreshDrivesButton" Content="⟳" Width="30" Height="30" Margin="4,0,0,0"
+                    ToolTip="Actualizar lista de unidades" Click="RefreshDrives_Click" />
+            <Button x:Name="ExploreButton" Content="Explorar" Width="110" Height="30" Margin="10,0,0,0"
+                    FontWeight="SemiBold" IsDefault="True" Click="Explore_Click" />
+            <Button x:Name="CancelButton" Content="Cancelar" Width="90" Height="30" Margin="6,0,0,0"
+                    Visibility="Collapsed" Click="Cancel_Click" />
+            <Button DockPanel.Dock="Right" Content="⚙ Configurar IA (Gemini)" Height="30" Padding="10,0"
+                    Click="Settings_Click" />
+        </DockPanel>
+
+        <!-- Estado del escaneo -->
+        <Grid Grid.Row="1" Margin="0,8,0,8">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="200" />
+            </Grid.ColumnDefinitions>
+            <TextBlock x:Name="StatusText" Foreground="#555" TextTrimming="CharacterEllipsis"
+                       Text="Elige una unidad y pulsa «Explorar»." VerticalAlignment="Center" />
+            <ProgressBar x:Name="ScanProgressBar" Grid.Column="1" Height="6" IsIndeterminate="True"
+                         Visibility="Collapsed" Margin="10,0,0,0" />
+        </Grid>
+
+        <!-- Panel de resultados dividido en 2 secciones -->
+        <Grid Grid.Row="2">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="3*" MinWidth="300" />
+                <ColumnDefinition Width="6" />
+                <ColumnDefinition Width="2*" MinWidth="260" />
+            </Grid.ColumnDefinitions>
+
+            <!-- Izquierda: árbol con columnas -->
+            <Border BorderBrush="#D0D4DA" BorderThickness="1" Background="White">
+                <ListView x:Name="TreeList" BorderThickness="0"
+                          SelectionMode="Single"
+                          VirtualizingPanel.IsVirtualizing="True"
+                          VirtualizingPanel.VirtualizationMode="Recycling"
+                          VirtualizingPanel.ScrollUnit="Item"
+                          SelectionChanged="TreeList_SelectionChanged"
+                          PreviewKeyDown="TreeList_PreviewKeyDown"
+                          MouseDoubleClick="TreeList_MouseDoubleClick">
+                    <ListView.ItemContainerStyle>
+                        <Style TargetType="ListViewItem">
+                            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                            <Setter Property="ToolTip" Value="{Binding ToolTip}" />
+                            <Setter Property="Padding" Value="0,1" />
+                        </Style>
+                    </ListView.ItemContainerStyle>
+                    <ListView.View>
+                        <GridView>
+                            <GridViewColumn Header="Nombre" Width="430">
+                                <GridViewColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <StackPanel Orientation="Horizontal">
+                                            <Border Width="{Binding Indent}" />
+                                            <Button Style="{StaticResource ExpanderButton}"
+                                                    Content="{Binding ExpanderGlyph}"
+                                                    Click="Expander_Click" />
+                                            <TextBlock Text="{Binding Icon}" Margin="2,0,6,0" VerticalAlignment="Center" />
+                                            <TextBlock Text="{Binding Name}" VerticalAlignment="Center"
+                                                       TextTrimming="CharacterEllipsis" />
+                                        </StackPanel>
+                                    </DataTemplate>
+                                </GridViewColumn.CellTemplate>
+                            </GridViewColumn>
+                            <GridViewColumn Header="Tamaño" Width="110">
+                                <GridViewColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <TextBlock Text="{Binding SizeText}" TextAlignment="Right" Width="96" />
+                                    </DataTemplate>
+                                </GridViewColumn.CellTemplate>
+                            </GridViewColumn>
+                            <GridViewColumn Header="% de la unidad" Width="150">
+                                <GridViewColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <Grid Width="134">
+                                            <ProgressBar Value="{Binding Percent, Mode=OneWay}" Maximum="100" Height="14"
+                                                         Foreground="#7FA7D9" Background="#EEF1F5" BorderThickness="0" />
+                                            <TextBlock Text="{Binding PercentText}" HorizontalAlignment="Right"
+                                                       Margin="0,0,4,0" FontSize="12" VerticalAlignment="Center" />
+                                        </Grid>
+                                    </DataTemplate>
+                                </GridViewColumn.CellTemplate>
+                            </GridViewColumn>
+                        </GridView>
+                    </ListView.View>
+                </ListView>
+            </Border>
+
+            <GridSplitter Grid.Column="1" Width="6" HorizontalAlignment="Stretch" Background="Transparent" />
+
+            <!-- Derecha: resumen del elemento seleccionado (vacío si no hay selección) -->
+            <Border Grid.Column="2" BorderBrush="#D0D4DA" BorderThickness="1" Background="White">
+                <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="14,10">
+                    <StackPanel x:Name="DetailPanel" Visibility="Collapsed">
+                        <TextBlock x:Name="DetailName" FontSize="17" FontWeight="SemiBold" TextWrapping="Wrap" />
+                        <TextBox x:Name="DetailPath" IsReadOnly="True" BorderThickness="0" Background="Transparent"
+                                 Foreground="#666" TextWrapping="Wrap" Margin="0,2,0,0" />
+
+                        <TextBlock Text="Información local" Style="{StaticResource SectionTitle}" />
+                        <ItemsControl x:Name="FactsList">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Grid Margin="0,1">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="150" />
+                                            <ColumnDefinition Width="*" />
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Text="{Binding Label}" Foreground="#666" />
+                                        <TextBlock Grid.Column="1" Text="{Binding Value}" TextWrapping="Wrap" />
+                                    </Grid>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+
+                        <DockPanel Margin="0,14,0,6">
+                            <Button x:Name="RetryAiButton" DockPanel.Dock="Right" Content="↻ Volver a consultar"
+                                    Padding="8,2" Click="RetryAi_Click" Visibility="Collapsed" />
+                            <TextBlock Text="Resumen desde internet (Gemini + Google Search)"
+                                       Style="{StaticResource SectionTitle}" Margin="0" VerticalAlignment="Center" />
+                        </DockPanel>
+
+                        <StackPanel x:Name="AiLoading" Orientation="Horizontal" Visibility="Collapsed" Margin="0,4">
+                            <ProgressBar IsIndeterminate="True" Width="80" Height="6" />
+                            <TextBlock Text="Buscando información en internet…" Margin="8,0,0,0" Foreground="#666" />
+                        </StackPanel>
+
+                        <TextBox x:Name="AiText" IsReadOnly="True" BorderThickness="0" Background="Transparent"
+                                 TextWrapping="Wrap" />
+
+                        <StackPanel x:Name="AiSetupPanel" Visibility="Collapsed" Margin="0,4">
+                            <TextBlock TextWrapping="Wrap" Foreground="#8A5A00"
+                                       Text="Para obtener el resumen desde internet necesitas una API key de Google Gemini (gratuita con límites)." />
+                            <Button Content="Configurar API key…" HorizontalAlignment="Left" Margin="0,8,0,0" Padding="10,3"
+                                    Click="Settings_Click" />
+                        </StackPanel>
+
+                        <TextBlock x:Name="SourcesTitle" Text="Fuentes" Style="{StaticResource SectionTitle}" Visibility="Collapsed" />
+                        <ItemsControl x:Name="SourcesList">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <TextBlock Margin="0,1" TextTrimming="CharacterEllipsis">
+                                        <Hyperlink NavigateUri="{Binding Uri}" RequestNavigate="Hyperlink_RequestNavigate"
+                                                   ToolTip="{Binding Uri}">
+                                            <Run Text="{Binding Title, Mode=OneWay}" />
+                                        </Hyperlink>
+                                    </TextBlock>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+                </ScrollViewer>
+            </Border>
+        </Grid>
+    </Grid>
+</Window>
