@@ -158,24 +158,31 @@
                             </ItemsControl.ItemTemplate>
                         </ItemsControl>
 
-                        <DockPanel Margin="0,14,0,6">
-                            <Button x:Name="RetryAiButton" DockPanel.Dock="Right" Content="↻ Volver a consultar"
-                                    Padding="8,2" Click="RetryAi_Click" Visibility="Collapsed" />
-                            <TextBlock Text="Resumen desde internet (Gemini + Google Search)"
-                                       Style="{StaticResource SectionTitle}" Margin="0" VerticalAlignment="Center" />
-                        </DockPanel>
+                        <TextBlock Text="Resumen con IA (Google Gemini)"
+                                   Style="{StaticResource SectionTitle}" />
 
-                        <StackPanel x:Name="AiLoading" Orientation="Horizontal" Visibility="Collapsed" Margin="0,4">
-                            <ProgressBar IsIndeterminate="True" Width="80" Height="6" />
-                            <TextBlock Text="Buscando información en internet…" Margin="8,0,0,0" Foreground="#666" />
+                        <!-- La consulta a la IA solo se hace al pulsar el botón, y solo para archivos. -->
+                        <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                            <Button x:Name="AskAiButton" Content="🔎 Obtener resumen" Padding="10,4"
+                                    IsEnabled="False" Click="AskAi_Click" />
+                            <StackPanel x:Name="AiLoading" Orientation="Horizontal" Visibility="Collapsed"
+                                        Margin="10,0,0,0" VerticalAlignment="Center">
+                                <ProgressBar IsIndeterminate="True" Width="80" Height="6" />
+                                <TextBlock Text="Consultando a Gemini…" Margin="8,0,0,0" Foreground="#666" />
+                                <Button x:Name="CancelAiButton" Content="✖ Cancelar" Padding="8,2" Margin="10,0,0,0"
+                                        ToolTip="Deja de esperar la respuesta de Gemini" Click="CancelAi_Click" />
+                            </StackPanel>
                         </StackPanel>
+
+                        <TextBlock x:Name="AiFolderNote" Visibility="Collapsed" Foreground="#666" TextWrapping="Wrap"
+                                   Text="El resumen con IA solo está disponible para archivos, no para carpetas." />
 
                         <TextBox x:Name="AiText" IsReadOnly="True" BorderThickness="0" Background="Transparent"
                                  TextWrapping="Wrap" />
 
                         <StackPanel x:Name="AiSetupPanel" Visibility="Collapsed" Margin="0,4">
                             <TextBlock TextWrapping="Wrap" Foreground="#8A5A00"
-                                       Text="Para obtener el resumen desde internet necesitas una API key de Google Gemini (gratuita con límites)." />
+                                       Text="Para obtener el resumen con IA necesitas una API key de Google Gemini (gratuita con límites)." />
                             <Button Content="Configurar API key…" HorizontalAlignment="Left" Margin="0,8,0,0" Padding="10,3"
                                     Click="Settings_Click" />
                         </StackPanel>

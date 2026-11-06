@@ -49,8 +49,12 @@ public sealed class AppSettings
     {
         try
         {
-            if (File.Exists(FilePath))
-                return JsonSerializer.Deserialize<AppSettings>(File.ReadAllText(FilePath)) ?? new AppSettings();
+            if (File.Exists(FilePath) && JsonSerializer.Deserialize<AppSettings>(File.ReadAllText(FilePath)) is { } settings)
+            {
+                // Solo se permiten modelos con nivel gratuito; cualquier otro vuelve al predeterminado.
+                if (!GeminiModels.IsFree(settings.Model)) settings.Model = DefaultModel;
+                return settings;
+            }
         }
         catch (Exception ex) when (ex is IOException or JsonException or UnauthorizedAccessException)
         {

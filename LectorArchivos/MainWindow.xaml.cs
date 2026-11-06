@@ -264,12 +264,21 @@ public partial class MainWindow : Window
     private void TreeList_SelectionChanged(object sender, SelectionChangedEventArgs e) =>
         ShowDetail((TreeList.SelectedItem as TreeRow)?.Node);
 
+    private const string AskAiText = "🔎 Obtener resumen";
+    private const string RetryAiText = "↻ Volver a consultar";
+
     private FsNode? _detailNode;
 
-    private async void ShowDetail(FsNode? node, bool forceRefresh = false)
+    /// <summary>Información local del archivo seleccionado (null mientras se carga o si es una carpeta).</summary>
+    private LocalFileInfo? _detailInfo;
+
+    /// <summary>Muestra la información local; el resumen con IA solo se consulta al pulsar el botón.</summary>
+    private async void ShowDetail(FsNode? node)
     {
+        // Cancela la carga o la consulta a la IA del elemento anterior.
         _detailCts?.Cancel();
         _detailNode = node;
+        _detailInfo = null;
 
         // Sin selección: el cuadro queda vacío.
         if (node is null)
@@ -285,56 +294,94 @@ public partial class MainWindow : Window
         DetailName.Text = node.Name;
         DetailPath.Text = node.FullPath;
         FactsList.ItemsSource = null;
-        AiText.Text = "";
-        SourcesList.ItemsSource = null;
-        SourcesTitle.Visibility = Visibility.Collapsed;
-        AiSetupPanel.Visibility = Visibility.Collapsed;
-        RetryAiButton.Visibility = Visibility.Collapsed;
-        AiLoading.Visibility = Visibility.Collapsed;
+        ClearAi();
+        AskAiButton.Content = AskAiText;
+        AskAiButton.IsEnabled = false;
+        // La búsqueda solo está disponible para archivos.
+        AskAiButton.Visibility = node.IsDirectory ? Visibility.Collapsed : Visibility.Visible;
+        AiFolderNote.Visibility = node.IsDirectory ? Visibility.Visible : Visibility.Collapsed;
 
         try
         {
             var info = await Task.Run(() => LocalFileInspector.Inspect(node), token);
             if (token.IsCancellationRequested) return;
             FactsList.ItemsSource = info.Facts().Select(f => new { f.Label, f.Value }).ToList();
+            if (node.IsDirectory) return;
 
-            var apiKey = _settings.GetApiKey();
-            if (apiKey is null)
-            {
-                AiSetupPanel.Visibility = Visibility.Visible;
-                return;
-            }
-
-            if (!forceRefresh && _aiCache.TryGetValue(info.Path, out var cached))
-            {
-                ShowAi(cached);
-                return;
-            }
-
-            AiLoading.Visibility = Visibility.Visible;
-            // Pequeña espera para no consultar la API mientras el usuario recorre la lista con el teclado.
-            await Task.Delay(700, token);
-
-            var summary = await new GeminiClient(apiKey, _settings.Model).SummarizeAsync(info, token);
-            _aiCache[info.Path] = summary;
-            if (!token.IsCancellationRequested) ShowAi(summary);
+            _detailInfo = info;
+            // Si ya se consultó antes en esta sesión, se muestra sin volver a llamar a la API.
+            if (_aiCache.TryGetValue(info.Path, out var cached)) ShowAi(cached);
+            AskAiButton.IsEnabled = true;
         }
         catch (OperationCanceledException) when (token.IsCancellationRequested)
         {
             // Se seleccionó otro elemento.
         }
+    }
+
+    /// <summary>Cancelación de la consulta en curso a Gemini (botón «Cancelar»).</summary>
+    private CancellationTokenSource? _aiCts;
+
+    private async void AskAi_Click(object sender, RoutedEventArgs e)
+    {
+        if (_detailInfo is not { IsDirectory: false } info || _detailCts is null) return;
+        // La consulta se cancela si el usuario pulsa «Cancelar» o si selecciona otro elemento.
+        var selectionToken = _detailCts.Token;
+        using var aiCts = CancellationTokenSource.CreateLinkedTokenSource(selectionToken);
+        var token = aiCts.Token;
+
+        ClearAi();
+        var apiKey = _settings.GetApiKey();
+        if (apiKey is null)
+        {
+            AiSetupPanel.Visibility = Visibility.Visible;
+            return;
+        }
+
+        _aiCts = aiCts;
+        AskAiButton.IsEnabled = false;
+        AiLoading.Visibility = Visibility.Visible;
+        try
+        {
+            var summary = await new GeminiClient(apiKey, _settings.Model).SummarizeAsync(info, token);
+            _aiCache[info.Path] = summary;
+            if (!token.IsCancellationRequested) ShowAi(summary);
+        }
+        catch (OperationCanceledException) when (selectionToken.IsCancellationRequested)
+        {
+            // Se seleccionó otro elemento mientras se consultaba: el panel ya muestra el nuevo.
+        }
+        catch (OperationCanceledException) when (token.IsCancellationRequested)
+        {
+            AiText.Text = "Consulta cancelada.";
+        }
         catch (Exception ex) when (ex is GeminiException or HttpRequestException or TaskCanceledException)
         {
-            if (token.IsCancellationRequested) return;
             AiText.Text = ex is TaskCanceledException
                 ? "La consulta a Gemini tardó demasiado. Inténtalo de nuevo."
                 : ex.Message;
-            RetryAiButton.Visibility = Visibility.Visible;
+            AskAiButton.Content = RetryAiText;
         }
         finally
         {
-            if (!token.IsCancellationRequested) AiLoading.Visibility = Visibility.Collapsed;
+            if (_aiCts == aiCts) _aiCts = null;
+            if (!selectionToken.IsCancellationRequested)
+            {
+                AiLoading.Visibility = Visibility.Collapsed;
+                AskAiButton.IsEnabled = true;
+            }
         }
+    }
+
+    private void CancelAi_Click(object sender, RoutedEventArgs e) => _aiCts?.Cancel();
+
+    private void ClearAi()
+    {
+        AiText.Text = "";
+        SourcesList.ItemsSource = null;
+        SourcesTitle.Visibility = Visibility.Collapsed;
+        AiSetupPanel.Visibility = Visibility.Collapsed;
+        AiLoading.Visibility = Visibility.Collapsed;
     }
 
     private void ShowAi(AiSummary summary)
@@ -342,12 +389,7 @@ public partial class MainWindow : Window
         AiText.Text = summary.Text;
         SourcesList.ItemsSource = summary.Sources;
         SourcesTitle.Visibility = summary.Sources.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
-        RetryAiButton.Visibility = Visibility.Visible;
-    }
-
-    private void RetryAi_Click(object sender, RoutedEventArgs e)
-    {
-        if (_detailNode is not null) ShowDetail(_detailNode, forceRefresh: true);
+        AskAiButton.Content = RetryAiText;
     }
 
     private void Hyperlink_RequestNavigate(object sender, RequestNavigateEventArgs e)
